@@ -33,11 +33,14 @@ def dashboard():
     if not isinstance(current_user, HodDean):
         return redirect(url_for("ho.login"))
     
-    pending_count = Event.query.filter_by(approval_status="Pending Approval").count()
-    approved_count = Event.query.filter_by(approval_status="Approved").count()
-    rejected_count = Event.query.filter_by(approval_status="Rejected").count()
+    # Get events assigned to this HOD/Dean
+    assigned_query = Event.query.filter((Event.approver_1 == current_user.username) | (Event.approver_2 == current_user.username))
     
-    recent_events = Event.query.order_by(Event.created_at.desc()).limit(5).all()
+    pending_count = assigned_query.filter_by(approval_status="Pending Approval").count()
+    approved_count = assigned_query.filter_by(approval_status="Approved").count()
+    rejected_count = assigned_query.filter_by(approval_status="Rejected").count()
+    
+    recent_events = assigned_query.order_by(Event.created_at.desc()).limit(5).all()
     
     return render_template("ho_dashboard.html", 
                            pending_count=pending_count, 
@@ -52,7 +55,10 @@ def event_approvals():
         return redirect(url_for("ho.login"))
     
     status = request.args.get('status', 'Pending Approval')
-    events = Event.query.filter_by(approval_status=status).all()
+    events = Event.query.filter(
+        ((Event.approver_1 == current_user.username) | (Event.approver_2 == current_user.username)),
+        Event.approval_status == status
+    ).all()
     
     return render_template("ho_event_approvals.html", events=events, current_status=status)
 
@@ -67,9 +73,16 @@ def approve_event(event_id):
     db.session.commit()
     
     # Notify Coordinator
-    coordinator = User.query.get(event.created_by)
-    if coordinator and coordinator.email:
-        send_event_status_email(coordinator.email, event.title, "Approved")
+    from models import Coordinator
+    coordinator = Coordinator.query.get(event.created_by)
+    if coordinator:
+        # Note: Coordinator model currently doesn't have email, falling back to name/placeholder
+        # or checking User table if they exist there too
+        from models import User
+        user_backup = User.query.get(event.created_by)
+        email = user_backup.email if user_backup else None
+        if email:
+            send_event_status_email(email, event.title, "Approved")
         
     flash(f"Event '{event.title}' approved successfully!", "success")
     return redirect(url_for("ho.event_approvals", status="Pending Approval"))
@@ -85,9 +98,14 @@ def reject_event(event_id):
     db.session.commit()
     
     # Notify Coordinator
-    coordinator = User.query.get(event.created_by)
-    if coordinator and coordinator.email:
-        send_event_status_email(coordinator.email, event.title, "Rejected")
+    from models import Coordinator
+    coordinator = Coordinator.query.get(event.created_by)
+    if coordinator:
+        from models import User
+        user_backup = User.query.get(event.created_by)
+        email = user_backup.email if user_backup else None
+        if email:
+            send_event_status_email(email, event.title, "Rejected")
         
     flash(f"Event '{event.title}' rejected.", "info")
     return redirect(url_for("ho.event_approvals", status="Pending Approval"))

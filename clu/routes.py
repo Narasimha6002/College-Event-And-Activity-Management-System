@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from models import Coordinator, Event, User # Use Coordinator for login
+from models import Coordinator, Event, User 
+from email_utils import send_registration_confirmation_email
 
 clu_bp = Blueprint("clu", __name__, template_folder="templates")
 
@@ -165,7 +166,9 @@ def create_event():
         flash("✅ Event created successfully and sent for approval!", "success")
         return redirect(url_for("clu.my_events"))
 
-    return render_template("clu_create_event.html")
+    from models import HodDean
+    hods = HodDean.query.all()
+    return render_template("clu_create_event.html", hods=hods)
 
 @clu_bp.route("/my_events")
 @login_required
@@ -222,7 +225,7 @@ def approve_payment(reg_id):
     if current_user.role != "clu":
         return redirect(url_for("auth.login"))
         
-    from models import Registration, Event
+    from models import Registration, Event, User
     from extensions import db
     
     reg = Registration.query.get_or_404(reg_id)
@@ -233,10 +236,26 @@ def approve_payment(reg_id):
         flash("Unauthorized", "error")
         return redirect(url_for("clu.dashboard"))
         
+    if reg.payment_status == "Confirmed":
+        flash("Registration is already confirmed.", "info")
+        return redirect(url_for("clu.participants", event_id=event.id))
+
+    # Check seat availability again before confirming
+    if event.available_seats is not None and event.available_seats <= 0:
+        flash("Error: Cannot confirm. Event is already full!", "error")
+        return redirect(url_for("clu.participants", event_id=event.id))
+
     reg.payment_status = "Confirmed"
+    if event.available_seats is not None:
+        event.available_seats -= 1
     db.session.commit()
     
-    flash("Payment approved. Student registration is now confirmed.", "success")
+    # Send confirmation email
+    student = User.query.get(reg.student_id)
+    if student and student.email:
+        send_registration_confirmation_email(student.email, student.name or student.username, event.title)
+    
+    flash("Payment approved. Student registration is now confirmed and email sent.", "success")
     return redirect(url_for("clu.participants", event_id=event.id))
 
 
@@ -267,7 +286,7 @@ def mark_present_manual(reg_id):
             new_log = AttendanceLog(
                 event_id=event.id,
                 student_id=reg.student_id,
-                status="Present",
+                marked_by=current_user.id,
                 timestamp=datetime.now()
             )
             db.session.add(new_log)
@@ -303,6 +322,11 @@ def mark_attendance():
     
     if not qr_data or not event_id:
         return jsonify({"error": "Missing data"}), 400
+        
+    from models import Event
+    event = Event.query.get(event_id)
+    if not event or event.created_by != current_user.id:
+        return jsonify({"error": "Unauthorized or Invalid Event"}), 403
         
     try:
         # Parse QR data

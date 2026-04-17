@@ -4,7 +4,7 @@
 <div class="space-y-6">
     <div class="flex items-center justify-between pb-4">
         <div>
-            <h1 class="text-2xl font-bold text-slate-900">Payments & Receipts</h1>
+            <h1 class="text-2xl font-bold text-slate-900">Payments</h1>
             <p class="text-sm text-slate-500 mt-1">History of your event payments and downloads.</p>
         </div>
     </div>
@@ -34,8 +34,6 @@
                         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
                         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
                         <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">
-                            Receipt</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
@@ -55,19 +53,10 @@
                                 {{ p.reg.payment_status }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-right">
-                            {% if p.reg.payment_status == 'Confirmed' %}
-                            <button class="text-indigo-600 hover:text-indigo-800 font-bold text-xs inline-flex items-center transition-colors">
-                                <i class="fa-solid fa-file-pdf mr-1.5"></i> RECEIPT
-                            </button>
-                            {% else %}
-                            <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Unavailable</span>
-                            {% endif %}
-                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-slate-400 italic font-medium">No payment history found</td>
+                        <td colspan="5" class="px-6 py-12 text-center text-slate-400 italic font-medium">No payment history found</td>
                     </tr>
                     {% endfor %}
                 </tbody>

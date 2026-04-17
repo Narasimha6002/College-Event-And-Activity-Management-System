@@ -141,16 +141,18 @@
                         <label class="block text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2">Permission Approver 1 (Mandatory)</label>
                         <select name="approver_1" required class="w-full px-4 py-3 rounded-xl border border-indigo-200 bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
                             <option value="">Select Approver</option>
-                            <option value="HOD">HOD</option>
-                            <option value="Dean">Dean</option>
+                            {% for hod in hods %}
+                            <option value="{{ hod.username }}">{{ hod.name }} - {{ hod.role }} ({{ hod.department }})</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2">Permission Approver 2 (Optional)</label>
                         <select name="approver_2" class="w-full px-4 py-3 rounded-xl border border-indigo-200 bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
                             <option value="">None</option>
-                            <option value="HOD">HOD</option>
-                            <option value="Dean">Dean</option>
+                            {% for hod in hods %}
+                            <option value="{{ hod.username }}">{{ hod.name }} - {{ hod.role }} ({{ hod.department }})</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>

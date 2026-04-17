@@ -3,6 +3,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from models import User, Registration, Event
 from extensions import db, bcrypt
 from utils import generate_qr_code
+from email_utils import send_registration_confirmation_email
 import time
 
 stu_bp = Blueprint("stu", __name__, template_folder="templates")
@@ -121,8 +122,8 @@ def events():
             "fee": event.fee,
             "poster": event.poster,
             "whatsapp_link": event.whatsapp_link,
-            "slots_remaining": max(0, (event.max_participants or 100) - reg_count),
-            "is_full": reg_count >= (event.max_participants or 100),
+            "slots_remaining": event.available_seats if event.available_seats is not None else max(0, (event.max_participants or 100) - reg_count),
+            "is_full": (event.available_seats == 0) if event.available_seats is not None else (reg_count >= (event.max_participants or 100)),
             "is_registered": event.id in user_reg_ids
         }
         enriched_events.append(event_dict)
@@ -140,8 +141,15 @@ def register_event(event_id):
         flash("You are already registered for this event!", "info")
         return redirect(url_for("stu.registrations"))
     
+    # Check seat availability
+    if event.available_seats is not None and event.available_seats <= 0:
+        flash("Sorry, this event is already full!", "error")
+        return redirect(url_for("stu.events"))
+
     # Create a pending registration
-    fee = float(event.fee) if event.fee and str(event.fee).replace('.','',1).isdigit() else 0.0
+    fee_str = str(event.fee).replace('.','',1) if event.fee else "0"
+    fee = float(event.fee) if fee_str.isdigit() else 0.0
+    
     reg = Registration(
         event_id=event_id,
         student_id=current_user.id,
@@ -149,21 +157,29 @@ def register_event(event_id):
         payment_status="Pending"
     )
     db.session.add(reg)
+    
+    # If free, confirm immediately and update capacity
+    if fee <= 0:
+        reg.payment_status = "Confirmed"
+        if event.available_seats is not None:
+            event.available_seats -= 1
+        db.session.commit()
+        
+        # Send confirmation email
+        send_registration_confirmation_email(current_user.email, current_user.name or current_user.username, event.title)
+        
+        flash("Successfully registered for the event! Confirmation email sent.", "success")
+        return redirect(url_for("stu.registrations"))
+
     db.session.commit()
 
     # If event has a Google Form, go there first before payment
     if event.google_form_link:
         return redirect(url_for("stu.google_form_step", reg_id=reg.id))
 
-    # No Google Form — skip to payment (or confirm if free)
-    if fee > 0:
-        flash("Enrolled! Please complete the payment to confirm your seat.", "success")
-        return redirect(url_for("stu.payment", reg_id=reg.id))
-    
-    reg.payment_status = "Confirmed"
-    db.session.commit()
-    flash("Successfully registered for the event!", "success")
-    return redirect(url_for("stu.registrations"))
+    # Paid event — go to payment
+    flash("Enrolled! Please complete the payment to confirm your seat.", "success")
+    return redirect(url_for("stu.payment", reg_id=reg.id))
 
 
 @stu_bp.route("/google_form_step/<int:reg_id>")

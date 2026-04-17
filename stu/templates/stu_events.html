@@ -44,9 +44,18 @@
     <!-- Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="eventsGrid">
         {% for event in events %}
-        <div class="event-card bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col md:flex-row" 
+        <div class="event-card bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow flex flex-col md:flex-row relative" 
              data-category="{{ event.category | default('Experimental') }}"
              data-status="{{ event.status | default('Upcoming') }}">
+            
+            <!-- Concept-Match Seat Badge (Top Left Sticker) -->
+            <div class="absolute top-2 left-2 z-50">
+                <div class="bg-[#f59e0b] px-3 py-2 rounded-xl shadow-lg border border-white/20 flex flex-col items-center justify-center min-w-[65px]">
+                    <span class="text-white text-xl font-bold leading-none">{{ event.slots_remaining }}</span>
+                    <span class="text-white text-[7px] font-black uppercase tracking-tighter mt-1">Seats Left</span>
+                </div>
+            </div>
+
             <div class="w-full md:w-48 h-48 md:h-auto bg-slate-100 flex-shrink-0 relative">
                 {% if event.poster %}
                 <img src="{{ url_for('static', filename='uploads/events/' + event.poster) }}"
@@ -57,7 +66,7 @@
                 </div>
                 {% endif %}
                 {% if event.is_full %}
-                <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center">
+                <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-20">
                     <span class="px-3 py-1 bg-white/20 border border-white/30 text-white text-[10px] font-bold uppercase rounded-full tracking-widest">Registration Closed</span>
                 </div>
                 {% endif %}
@@ -78,13 +87,14 @@
                 <h3 class="text-lg font-bold text-slate-900 event-title">{{ event.title }}</h3>
                 <div class="flex items-center justify-between mt-1">
                     <p class="text-sm font-medium text-slate-500">By {{ event.club_name }}</p>
-                    <span class="text-[11px] font-bold {% if event.slots_remaining < 5 %}text-red-500{% else %}text-slate-400{% endif %}">
-                        {{ event.slots_remaining }} slots left
-                    </span>
                 </div>
 
                 <div class="mt-4 flex items-center space-x-2">
+                    {% if event.fee and event.fee|float > 0 %}
+                    <span class="text-xs font-bold px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md">₹{{ event.fee }}</span>
+                    {% else %}
                     <span class="text-xs font-bold px-2 py-1 bg-green-50 text-green-700 rounded-md">Free</span>
+                    {% endif %}
                 </div>
 
                 <div class="mt-6 pt-4 border-t border-slate-100 flex items-center gap-3 mt-auto">

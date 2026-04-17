@@ -31,6 +31,8 @@ mail.init_app(app)
 
 with app.app_context():
     db.create_all()
+    from seeding_utils import ensure_demo_accounts
+    ensure_demo_accounts()
 
 login_manager.login_view = "index"
 login_manager.login_message_category = "info"

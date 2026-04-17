@@ -317,6 +317,56 @@ def events_overview():
 
     return render_template("adm_events.html", event_data=event_data, summary=summary)
 
+@adm_bp.route("/export_events_report")
+@login_required
+def export_events_report():
+    if not isinstance(current_user, Admin):
+        return redirect(url_for("adm.login"))
+    
+    import csv
+    import io
+    from flask import make_response
+    from models import Event, Registration
+    from sqlalchemy import func
+
+    # Fetch all events
+    events = Event.query.order_by(Event.created_at.desc()).all()
+
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(['Event Title', 'Club', 'Category', 'Date', 'Status', 'Participants', 'Confirmed Payments', 'Revenue (₹)'])
+    
+    for event in events:
+        reg_count = Registration.query.filter_by(event_id=event.id).count()
+        confirmed = Registration.query.filter_by(event_id=event.id, payment_status='Confirmed').count()
+        revenue = db.session.query(func.sum(Registration.amount)).filter_by(
+            event_id=event.id, payment_status='Confirmed'
+        ).scalar() or 0.0
+        
+        writer.writerow([
+            event.title,
+            event.club_name,
+            event.category,
+            event.event_date,
+            event.approval_status,
+            reg_count,
+            confirmed,
+            f"{revenue:.2f}"
+        ])
+
+    output.seek(0)
+    
+    # Create response
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = f"attachment; filename=event_report_{timestamp}.csv"
+    response.headers["Content-type"] = "text/csv"
+    
+    return response
+
 @adm_bp.route("/logout")
 @login_required
 def logout():

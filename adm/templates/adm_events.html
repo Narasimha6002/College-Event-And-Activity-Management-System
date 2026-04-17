@@ -65,9 +65,14 @@
             <h3 class="text-lg font-extrabold text-slate-900">All Events</h3>
             <p class="text-xs text-slate-400 font-medium mt-0.5">Sorted by most recent</p>
         </div>
-        <span class="text-xs font-bold text-slate-400 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-            {{ summary.total }} total
-        </span>
+        <div class="flex items-center space-x-3">
+            <a href="{{ url_for('adm.export_events_report') }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-[10px] font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                <i class="fa-solid fa-file-csv mr-2"></i> Download Report (CSV)
+            </a>
+            <span class="text-xs font-bold text-slate-400 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                {{ summary.total }} total
+            </span>
+        </div>
     </div>
 
     {% if event_data %}

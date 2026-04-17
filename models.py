@@ -104,6 +104,9 @@ class User(db.Model, UserMixin):
             user.group3_credits = int(g3)
             db.session.commit()
 
+    def set_password(self, password):
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+
 class Event(db.Model):
     __tablename__ = 'events'
     id = db.Column(db.Integer, primary_key=True)
@@ -128,10 +131,13 @@ class Event(db.Model):
     approver_2 = db.Column(db.String(100))
     approval_status = db.Column(db.String(50), default="Pending Approval")
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    available_seats = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @staticmethod
     def create_event(data):
+        if 'available_seats' not in data and 'max_participants' in data:
+            data['available_seats'] = data['max_participants']
         event = Event(**data)
         db.session.add(event)
         db.session.commit()
@@ -241,6 +247,9 @@ class HodDean(db.Model, UserMixin):
         db.session.commit()
         return hod
 
+    def set_password(self, password):
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+
 class Admin(db.Model, UserMixin):
     __tablename__ = 'admin'
     id = db.Column(db.Integer, primary_key=True)
@@ -267,6 +276,9 @@ class Admin(db.Model, UserMixin):
         db.session.add(adm)
         db.session.commit()
         return adm
+
+    def set_password(self, password):
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
 
 class Club(db.Model):
     __tablename__ = 'clubs'
@@ -304,3 +316,6 @@ class Coordinator(db.Model, UserMixin):
         db.session.add(cl)
         db.session.commit()
         return cl
+
+    def set_password(self, password):
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')

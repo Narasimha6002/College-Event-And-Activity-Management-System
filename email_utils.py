@@ -81,6 +81,35 @@ CEAM Team
         return False
 
 
+def send_registration_confirmation_email(recipient_email, student_name, event_title):
+    """
+    Sends registration confirmation email to the student
+    """
+    msg = Message(
+        subject=f"CEAM - Registration Confirmed: {event_title}",
+        recipients=[recipient_email]
+    )
+
+    msg.body = f"""
+Hello {student_name},
+
+Success! Your registration for the event "{event_title}" has been confirmed.
+
+We are excited to have you join us. Please check the event details in your dashboard for the venue and timing.
+
+Regards,
+CEAM Team
+"""
+
+    try:
+        mail.send(msg)
+        print(f"Confirmation email sent to {recipient_email}")
+        return True
+    except Exception as e:
+        print(f"Failed to send confirmation email: {e}")
+        return False
+
+
 def send_event_reminder_email(recipient_email, student_name, event_title, event_date):
     """
     Notifies the student about an upcoming event
